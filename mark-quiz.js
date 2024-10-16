@@ -62,10 +62,10 @@ const cssHtml = `
 </style>
 `;
 
-class SingleChoiceQuestion {
+export class SingleChoiceQuestion {
     renderQuestion (questionElement, questionLine, childLines) {
         const questionHeader = document.createElement('h3');
-        questionHeader.textContent = questionLine;
+        questionHeader.innerHTML = markQuizConfig.processQuestionText(questionLine);
         questionElement.appendChild(questionHeader);
 
         for (let bodyLine of childLines) {
@@ -88,7 +88,7 @@ class SingleChoiceQuestion {
             answerLabelElement.appendChild(radioElement);
 
             const answerTextElement = document.createElement('span');
-            answerTextElement.textContent = answer;
+            answerTextElement.innerHTML = markQuizConfig.processAnswerText(answer);
             answerLabelElement.appendChild(answerTextElement);
 
             questionElement.appendChild(answerLabelElement);
@@ -101,10 +101,10 @@ class SingleChoiceQuestion {
     }
 }
 
-class MultipleChoiceQuestion {
+export class MultipleChoiceQuestion {
     renderQuestion (questionElement, questionLine, childLines) {
         const questionHeader = document.createElement('h3');
-        questionHeader.textContent = questionLine;
+        questionHeader.innerHTML = markQuizConfig.processQuestionText(questionLine);
         questionElement.appendChild(questionHeader);
 
         for (let bodyLine of childLines) {
@@ -127,7 +127,7 @@ class MultipleChoiceQuestion {
             answerLabelElement.appendChild(checkboxElement);
 
             const answerTextElement = document.createElement('span');
-            answerTextElement.textContent = answer;
+            answerTextElement.innerHTML = markQuizConfig.processAnswerText(answer);
             answerLabelElement.appendChild(answerTextElement);
 
             questionElement.appendChild(answerLabelElement);
@@ -153,10 +153,10 @@ class MultipleChoiceQuestion {
     }
 }
 
-class FreeTextQuestion {
+export class FreeTextQuestion {
     renderQuestion (questionElement, questionLine, childLines) {
         const questionHeader = document.createElement('h3');
-        questionHeader.textContent = questionLine;
+        questionHeader.innerHTML = markQuizConfig.processQuestionText(questionLine);
         questionElement.appendChild(questionHeader);
 
         for (let bodyLine of childLines) {
@@ -190,13 +190,17 @@ class FreeTextQuestion {
     }
 }
 
-const questionProcessors = {
-    '1': new SingleChoiceQuestion(),
-    'n': new MultipleChoiceQuestion(),
-    '_': new FreeTextQuestion()
+export const markQuizConfig = {
+    questionProcessors: {
+        '1': new SingleChoiceQuestion(),
+        'n': new MultipleChoiceQuestion(),
+        '_': new FreeTextQuestion()
+    },
+    processQuestionText: text => text,
+    processAnswerText: text => text
 };
 
-class MarkQuiz extends HTMLElement {
+export class MarkQuiz extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
@@ -243,7 +247,7 @@ class MarkQuiz extends HTMLElement {
                     questionBodyLines.push(bodyLine);
                 }
 
-                questionProcessors[questionType].renderQuestion(questionElement, questionLine, questionBodyLines);
+                markQuizConfig.questionProcessors[questionType].renderQuestion(questionElement, questionLine, questionBodyLines);
                 quizElement.appendChild(questionElement);
             }
         }
@@ -271,7 +275,7 @@ class MarkQuiz extends HTMLElement {
             
             const questions = quizElement.querySelectorAll('article');
             questions.forEach(questionElement => {
-                const result = questionProcessors[questionElement.dataset.questionType].checkAnswer(questionElement);
+                const result = markQuizConfig.questionProcessors[questionElement.dataset.questionType].checkAnswer(questionElement);
                 if (result.correct) {
                     score++;
                 } else {
