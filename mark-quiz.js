@@ -1,4 +1,10 @@
+/**
+ Style header for the component
+
+ @type {string}
+ */
 const cssHtml = `
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 <style>
 .mark-quiz {
     border: 1px dotted #777;
@@ -13,13 +19,12 @@ const cssHtml = `
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         margin-block: 20px;
 
-
-        h3 {
-           color: steelblue;  
-        }
+        div.question {}
     
         label {
-            display: block;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
             cursor: pointer;
 
             input[type='checkbox'] {
@@ -62,28 +67,61 @@ const cssHtml = `
 </style>
 `;
 
-export class SingleChoiceQuestion {
-    renderQuestion (questionElement, questionLine, childLines) {
-        const questionHeader = document.createElement('h3');
-        questionHeader.innerHTML = markQuizConfig.processQuestionText(questionLine);
+
+/**
+ * Abstract class for markdown question types
+ */
+class MarkQuestionHandler {
+    /**
+     * Renders a question of this type
+     *
+     * @param {HTMLElement} _questionElement Element to render onto
+     * @param {string} _questionContent Question content
+     * @param {string[]} _answers Answer content list
+     */
+    renderQuestion (_questionElement, _questionContent, _answers) {
+        throw new Error('Can not instantiate abstract class');
+    }
+
+    /**
+     * Check an answer
+     * 
+     * @param {HTMLElement} _questionElement Element to render onto
+     * @returns {{ correct: boolean }}
+     */
+    checkAnswer(_questionElement) {
+        throw new Error('Not implemented');
+    }
+}
+
+/**
+ * Handler for free form entry questions
+ */
+export class SingleChoiceQuestionHandler extends MarkQuestionHandler {
+    /**
+     * Renders a question of this type
+     *
+     * @param {HTMLElement} questionElement Element to render onto
+     * @param {string} questionContent Question content
+     * @param {string[]} answers Answer content list
+     */
+    renderQuestion (questionElement, questionContent, answers) {
+        const questionHeader = document.createElement('div');
+        questionHeader.classList.add('question');
+        questionHeader.innerHTML = markQuizConfig.processQuestionText(questionContent);
         questionElement.appendChild(questionHeader);
 
-        for (let bodyLine of childLines) {
-            let answer = bodyLine.trim();
-            if (answer === '') {
-                continue;
-            }
+        for (let answer of answers) {
             const isCorrectAnswer = answer.substring(1, 2) === 'x';
-
             answer = answer.substring(3).trim();
 
             const answerLabelElement = document.createElement('label');
             const radioElement   = document.createElement('input');
             radioElement.type = 'radio';
-            radioElement.name = questionLine;
+            radioElement.name = questionContent;
             radioElement.value = answer;
             if (isCorrectAnswer) {
-                radioElement.dataset.correct = true;
+                radioElement.dataset.correct = 'true';
             }
             answerLabelElement.appendChild(radioElement);
 
@@ -95,33 +133,46 @@ export class SingleChoiceQuestion {
         }
     }
 
+    /**
+     * Check an answer
+     * 
+     * @param {HTMLElement} questionElement Element to render onto
+     * @returns {{ correct: boolean }}
+     */
     checkAnswer (questionElement) {
         const correctAnswerElement = questionElement.querySelector('input[data-correct]');
-        return { correct: correctAnswerElement?.checked };
+        return { correct: /** @type {HTMLInputElement} */ (correctAnswerElement)?.checked };
     }
 }
 
-export class MultipleChoiceQuestion {
-    renderQuestion (questionElement, questionLine, childLines) {
-        const questionHeader = document.createElement('h3');
-        questionHeader.innerHTML = markQuizConfig.processQuestionText(questionLine);
+/**
+ * Handler for multiple choice questions (check all that apply)
+ */
+export class MultipleChoiceQuestionHandler extends MarkQuestionHandler {
+    /**
+     * Renders a question of this type
+     *
+     * @param {HTMLElement} questionElement Element to render onto
+     * @param {string} questionContent Question content
+     * @param {string[]} answers Answer content list
+     */
+    renderQuestion (questionElement, questionContent, answers) {
+        const questionHeader = document.createElement('div');
+        questionHeader.classList.add('question');
+        questionHeader.innerHTML = markQuizConfig.processQuestionText(questionContent);
         questionElement.appendChild(questionHeader);
 
-        for (let bodyLine of childLines) {
-            let answer = bodyLine.trim();
-            if (answer === '') {
-                continue;
-            }
+        for (let answer of answers) {
             const isCorrectAnswer = answer.substring(1, 2) === 'x';
             answer = answer.substring(3).trim();
 
             const answerLabelElement = document.createElement('label');
             const checkboxElement = document.createElement('input');
             checkboxElement.type = 'checkbox';
-            checkboxElement.name = questionLine;
+            checkboxElement.name = questionContent;
             checkboxElement.value = answer;
             if (isCorrectAnswer) {
-                checkboxElement.dataset.correct = true;
+                checkboxElement.dataset.correct = 'true';
             }
             
             answerLabelElement.appendChild(checkboxElement);
@@ -134,18 +185,24 @@ export class MultipleChoiceQuestion {
         }           
     }
 
+    /**
+     * Check an answer
+     * 
+     * @param {HTMLElement} questionElement Element to render onto
+     * @returns {{ correct: boolean }}
+     */
     checkAnswer (questionElement) {
         const correctAnswerElements = questionElement.querySelectorAll('input[data-correct]');
         const incorrectAnswerElements = questionElement.querySelectorAll('input:not([data-correct])');
 
         for (let correctAnswerElement of correctAnswerElements) {
-            if (!correctAnswerElement.checked) {
+            if (!/** @type {HTMLInputElement} */(correctAnswerElement).checked) {
                 return { correct: false };
             }
         }
 
         for (let incorrectAnswerElement of incorrectAnswerElements) {
-            if (incorrectAnswerElement.checked) {
+            if (/** @type {HTMLInputElement} */(incorrectAnswerElement).checked) {
                 return { correct: false };
             }
         }
@@ -153,25 +210,31 @@ export class MultipleChoiceQuestion {
     }
 }
 
-export class FreeTextQuestion {
-    renderQuestion (questionElement, questionLine, childLines) {
-        const questionHeader = document.createElement('h3');
-        questionHeader.innerHTML = markQuizConfig.processQuestionText(questionLine);
+/**
+ * Handler for free form entry questions
+ */
+export class FreeTextQuestionHandler extends MarkQuestionHandler {
+    /**
+     * Renders a question of this type
+     *
+     * @param {HTMLElement} questionElement Element to render onto
+     * @param {string} questionContent Question content
+     * @param {string[]} answers Answer content list
+     */
+    renderQuestion (questionElement, questionContent, answers) {
+        const questionHeader = document.createElement('div');
+        questionHeader.classList.add('question');
+        questionHeader.innerHTML = markQuizConfig.processQuestionText(questionContent);
         questionElement.appendChild(questionHeader);
 
-        for (let bodyLine of childLines) {
-            let answer = bodyLine.trim();
-            if (answer === '') {
-                continue;
-            }
-            // correct answer is between brackets
+        for (let answer of answers) {
             const correctAnswer = answer.substring(answer.indexOf('[') + 1, answer.indexOf(']'));
             answer = answer.substring(3).trim();
 
             const answerLabelElement = document.createElement('label');
             const textBoxElement = document.createElement('input');
             textBoxElement.type = 'text';
-            textBoxElement.name = questionLine;
+            textBoxElement.name = questionContent;
             textBoxElement.dataset.correct = correctAnswer;
             
             answerLabelElement.appendChild(textBoxElement);
@@ -180,6 +243,12 @@ export class FreeTextQuestion {
         }                
     }
 
+    /**
+     * Check an answer
+     * 
+     * @param {HTMLElement} questionElement Element to render onto
+     * @returns {{ correct: boolean }}
+     */
     checkAnswer (questionElement) {
         const correctAnswer = questionElement.querySelector('input').dataset.correct;
         const userAnswer = questionElement.querySelector('input').value;
@@ -190,24 +259,36 @@ export class FreeTextQuestion {
     }
 }
 
+/**
+ * Configuration Object for markdown
+ */
 export const markQuizConfig = {
     questionProcessors: {
-        '1': new SingleChoiceQuestion(),
-        'n': new MultipleChoiceQuestion(),
-        '_': new FreeTextQuestion()
+        '1': new SingleChoiceQuestionHandler(),
+        'n': new MultipleChoiceQuestionHandler(),
+        '_': new FreeTextQuestionHandler()
     },
-    processQuestionText: text => text,
-    processAnswerText: text => text
+    processQuestionText: (/** @type {string} */ text) => text.replace('\n', '<br>'),
+    processAnswerText: (/** @type {string} */ text) => text.replace('\n', '<br>')
 };
 
+/**
+ * MarkQuiz Web Component class
+ */
 export class MarkQuiz extends HTMLElement {
+    /**
+     * Constructor
+     */
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
         this.render();
     }
 
-    render () {
+    /**
+     * Render this component
+     */
+    render() {
         this.shadowRoot.innerHTML = `<slot></slot>`;
         const slot = this.shadowRoot.querySelector('slot');
         slot.addEventListener('slotchange', () => {
@@ -222,34 +303,80 @@ export class MarkQuiz extends HTMLElement {
         });
     }
 
-    translateQuizCode (quizMarkdown) {
+    /** 
+     * Translate quiz code to interactive HTML quiz
+     *
+     * @param {string} quizCode quiz code
+     */
+    translateQuizCode(quizCode) {
         let quizElement = document.createElement('section');
         quizElement.classList.add('mark-quiz');
-        const lines = quizMarkdown.split('\n');
+        const lines = quizCode.split('\n');
 
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.startsWith('#')) {
-                const questionType = line[1];
-                const questionLine = line.substring(2).trim();
+            let questionContent = lines[i];
 
-                const questionElement = document.createElement('article');
-                
-                questionElement.dataset.questionType = questionType;
-                
-                const questionBodyLines = [];
-                for (let j = i + 1; j < lines.length; j++) {
-                    const bodyLine = lines[j].trim();
-                    if (bodyLine.startsWith('#')) {
-                        i = j - 1;
+            if (!questionContent.trim().startsWith('#')) {
+                continue;
+            }
+
+            let questionIndent = this.countIndent(questionContent);
+            questionContent = this.removeIndent(questionContent, questionIndent);
+
+            for (let j = i + 1; j < lines.length; j++){
+                const additionalLine = lines[j];
+
+                if (additionalLine.trim().startsWith('[') || additionalLine.trim().startsWith('#')) {
+                    break;
+                }
+                questionContent += '\n' + this.removeIndent(additionalLine, questionIndent);
+                i = j;
+            }
+            if (i >= lines.length) break;
+
+            let answers = [];
+            
+            for (let j = i + 1; j < lines.length; j++){
+                const additionalLine = lines[j]
+
+                if (!additionalLine.trim().startsWith('[')) {
+                    continue;
+                }
+                let currentAnswerContent = this.removeIndent(additionalLine, questionIndent);
+
+                for (let k = j + 1; k < lines.length; k++){
+                    const additionalLine = lines[k]
+
+                    if (additionalLine.trim().startsWith('[') || additionalLine.trim().startsWith('#')) {
                         break;
                     }
-                    questionBodyLines.push(bodyLine);
+                    currentAnswerContent += '\n' + this.removeIndent(additionalLine, questionIndent);
+                    i = k;
+                    j = k;
+                }
+                answers.push(currentAnswerContent.trim());
+                i = j;
+
+                if (lines[j+1]?.trim().startsWith('#')) {
+                    break;
                 }
 
-                markQuizConfig.questionProcessors[questionType].renderQuestion(questionElement, questionLine, questionBodyLines);
-                quizElement.appendChild(questionElement);
+                if (i >= lines.length) break;
             }
+            if (i >= lines.length) break;
+
+            questionContent = questionContent.trim();
+
+            const questionType = questionContent[1];
+            questionContent = questionContent.substring(2);
+
+            console.log(questionContent);
+            console.log(answers);
+
+            const questionElement = document.createElement('article');
+            questionElement.dataset.questionType = questionType;
+            markQuizConfig.questionProcessors[questionType].renderQuestion(questionElement, questionContent, answers);
+            quizElement.appendChild(questionElement);
         }
         const gradeDiv = document.createElement('div');
         gradeDiv.classList.add('grade');
@@ -281,7 +408,7 @@ export class MarkQuiz extends HTMLElement {
                 } else {
                     gradeErrorHeading.classList.remove('hidden');
                     const li = document.createElement('li');
-                    li.innerText = questionElement.querySelector('h3').innerText;
+                    li.innerText = /** @type HTMLElement */(questionElement.querySelector('.question')).innerText;
                     gradeErrorList.appendChild(li);
                 }
             });
@@ -295,6 +422,30 @@ export class MarkQuiz extends HTMLElement {
       
         quizElement.appendChild(gradeDiv);
         return quizElement;
+    }
+
+    /**
+     * Count how many spaces are at the start of a string
+     *
+     * @param {string} str 
+     * @returns {number} The number of spaces at the start of the string
+     */
+    countIndent(str) {
+        let count = 0;
+        for (; count < str.length && str[count] == ' '; count++);
+        return count;
+    } 
+
+
+    /**
+     * Remove x spaces from start of string
+     * 
+     * @param {string} str String to remove spaces from
+     * @param {number} count Spaces to remove
+     * @returns {string} String with spaces removed
+     */
+    removeIndent(str, count) {
+        return (this.countIndent(str) >= count) ? str.substring(count) : str;
     }
 }
 

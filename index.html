@@ -1,67 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <style>
-        *, *::before, *::after {
-            box-sizing: border-box;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: roboto, helvetica, arial, sans-serif;
+    }
+
+    h1 {
+      font-size: 6rem;
+      text-align: center;
+    }
+
+    .mark-quiz-container {
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 1000px;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked-highlight/lib/index.umd.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <script type="module">
+    import {markQuizConfig} from './mark-quiz.js';
+
+    const {markedHighlight} = globalThis.markedHighlight;
+
+    const m = new marked.Marked(
+      markedHighlight({
+        emptyLangClass: 'hljs',
+        langPrefix: 'hljs language-',
+        highlight(code, lang, info) {
+          const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+          return hljs.highlight(code, {language}).value;
         }
-        body {
-            font-family: roboto, helvetica, arial, sans-serif;
-        }
-        h1 {
-            font-size: 6rem;
-            text-align: center;
-        }
-        .mark-quiz-container {
-            margin-left: auto;
-            margin-right: auto;
-            max-width: 1000px;
-        }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script type="module">
-        import { markQuizConfig } from './mark-quiz.js';
-        markQuizConfig.processQuestionText = t => marked.parse(t);
-        markQuizConfig.processAnswerText = t => marked.parse(t);
-    </script>
+      })
+    );
+
+    markQuizConfig.processQuestionText = t => m.parse(t);
+    markQuizConfig.processAnswerText = t => m.parse(t);
+  </script>
 </head>
+
 <body>
-    <h1>Quiz Example</h1>
-    <div class="mark-quiz-container">
-        <mark-quiz>
-            #1 Question 1 `function() {}`
+  <h1>Quiz Example</h1>
+  <div class="mark-quiz-container">
+    <mark-quiz>
+      #1 # Question 1
 
-            ( ) Answer 1
-            (x) Answer 2
-            ( ) Answer 3
+      ```javascript
+      function() {}
+      ```
 
-            #n Question 2
-        
-            [ ] Answer 1
-            [x] Answer 2
-            [x] Answer 3
+      [ ] Answer 1
 
-            #_ Question 3
-            [asdf]
+      *This* is something else
+      > block
 
-            #1 Question 4
+      ```javascript
+      var a = 'This is code';
+      ```
 
-            ( ) Answer 1
-            (x) Answer 2
-            ( ) Answer 3
+      [x] Answer 2
+      [ ] Answer 3
 
-            #n Question 5
-        
-            [ ] Answer 1
-            [x] Answer 2
-            [x] Answer 3
+      #n # Question 2
 
-            #_ Question 6
-            [asdf]
-        </mark-quiz>
-    </div>
+      [ ] Answer 1
+      [x] Answer 2
+      [x] Answer 3
+
+      #_ # Question 3
+      [asdf]
+    </mark-quiz>
+  </div>
 </body>
+
 </html>
